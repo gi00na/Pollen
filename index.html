@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pollen-Tagebuch</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pollen">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#2d6a55">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Young+Serif&display=swap">
+<style>
+/* Layout: one calm column, sticky date header, bottom tab bar; severity colours shared by entry buttons and history grid */
+:root{
+  --bg:#f2f5f1; --surface:#ffffff; --ink:#1c2a23; --muted:#5a6a62; --line:#d6dfd9;
+  --accent:#2d6a55; --on-accent:#ffffff; --accent-soft:#dcebe3; --pollen:#c9951a;
+  --lv0:#e3ebe6; --lv1:#f3dc8c; --lv2:#eba352; --lv3:#c4553a;
+  --on-lv0:#1c2a23; --on-lv1:#3a2f05; --on-lv2:#3a1d02; --on-lv3:#ffffff;
+  --warn-bg:#fbf0d2; --warn-ink:#5a4306; --danger:#a63d2a;
+  --f-display:"Young Serif", Georgia, "Times New Roman", serif;
+  --f-body:"Atkinson Hyperlegible", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r:14px; --tab-h:64px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111815; --surface:#19221e; --ink:#e4ece7; --muted:#9aaba2; --line:#2b3832;
+  --accent:#7cc4a7; --on-accent:#0d1a14; --accent-soft:#213a30; --pollen:#e3b440;
+  --lv0:#25302b; --lv1:#8c7424; --lv2:#a8622a; --lv3:#b54a33;
+  --on-lv0:#e4ece7; --on-lv1:#fff6d8; --on-lv2:#fff0e2; --on-lv3:#ffffff;
+  --warn-bg:#3a3014; --warn-ink:#f3dfa2; --danger:#e58a76; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#111815; --surface:#19221e; --ink:#e4ece7; --muted:#9aaba2; --line:#2b3832;
+  --accent:#7cc4a7; --on-accent:#0d1a14; --accent-soft:#213a30; --pollen:#e3b440;
+  --lv0:#25302b; --lv1:#8c7424; --lv2:#a8622a; --lv3:#b54a33;
+  --on-lv0:#e4ece7; --on-lv1:#fff6d8; --on-lv2:#fff0e2; --on-lv3:#ffffff;
+  --warn-bg:#3a3014; --warn-ink:#f3dfa2; --danger:#e58a76; color-scheme:dark;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{margin:0;padding-top:env(safe-area-inset-top,0px);background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 calc(var(--tab-h) + 32px + env(safe-area-inset-bottom,0px))}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{margin:0;text-wrap:balance}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 10px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.datenav{display:flex;align-items:center;gap:8px}
+.datenav h1{font-family:var(--f-display);font-weight:400;font-size:1.45rem;flex:1;text-align:center;line-height:1.2}
+.iconbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:1.3rem;display:grid;place-items:center;flex:none}
+.iconbtn:disabled{opacity:.35;cursor:default}
+.sub{display:flex;justify-content:center;gap:10px;align-items:center;font-size:.85rem;color:var(--muted);margin-top:4px;min-height:1.6em;flex-wrap:wrap}
+.linkbtn{border:0;background:none;color:var(--accent);font-weight:700;padding:2px 4px;text-decoration:underline;text-underline-offset:3px}
+.progress{font-variant-numeric:tabular-nums}
+.pagetitle{font-family:var(--f-display);font-weight:400;font-size:1.45rem;text-align:center;line-height:1.2}
+
+.group{display:flex;flex-direction:column;gap:14px;margin-bottom:28px}
+.grouphead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.grouphead h2{font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.q{display:flex;flex-direction:column;gap:8px}
+.q + .q{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.qlabel{font-weight:700;font-size:1.02rem}
+.qlabel small{font-weight:400;color:var(--muted);font-size:.85rem;margin-left:4px}
+.meaning{font-size:.85rem;color:var(--muted);min-height:1.3em}
+
+.scale{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.lv{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:1px;min-height:56px}
+.lv b{font-size:1.25rem;line-height:1;font-variant-numeric:tabular-nums}
+.lv span{font-size:.74rem;color:var(--muted)}
+.lv.on span{color:inherit}
+.lv.on.l0{background:var(--lv0);color:var(--on-lv0);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.lv.on.l1{background:var(--lv1);color:var(--on-lv1);border-color:transparent}
+.lv.on.l2{background:var(--lv2);color:var(--on-lv2);border-color:transparent}
+.lv.on.l3{background:var(--lv3);color:var(--on-lv3);border-color:transparent}
+
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.segbtn{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:12px 4px;font-size:.92rem;min-height:48px}
+.segbtn.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:700}
+
+.legend{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.84rem;align-items:center}
+.legend i{display:inline-grid;place-items:center;width:26px;height:22px;border-radius:6px;font-style:normal;font-weight:700;font-variant-numeric:tabular-nums}
+.legend i.l0{background:var(--lv0);color:var(--on-lv0)} .legend i.l1{background:var(--lv1);color:var(--on-lv1)}
+.legend i.l2{background:var(--lv2);color:var(--on-lv2)} .legend i.l3{background:var(--lv3);color:var(--on-lv3)}
+details.legendbox summary{cursor:pointer;font-size:.85rem;color:var(--accent);font-weight:700;list-style:none}
+details.legendbox summary::-webkit-details-marker{display:none}
+details.legendbox[open] summary{margin-bottom:8px}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:10px 16px;min-height:44px}
+.chip.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:700}
+.chip.ghost{border-style:dashed;color:var(--accent);background:transparent}
+.addrow{display:flex;gap:8px;margin-top:4px}
+.addrow input{flex:1;min-width:0}
+input[type=text],textarea,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+textarea{min-height:90px;resize:vertical}
+.btn{border:0;background:var(--accent);color:var(--on-accent);border-radius:10px;padding:10px 16px;font-weight:700;min-height:44px}
+.btn.quiet{background:var(--accent-soft);color:var(--ink)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn.wide{width:100%}
+
+.pollen{font-size:.88rem;border-radius:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--line);color:var(--muted)}
+.pollen b{color:var(--ink)}
+.pollen.pl0{background:var(--lv0);color:var(--on-lv0);border-color:transparent}
+.pollen.pl1{background:var(--lv1);color:var(--on-lv1);border-color:transparent}
+.pollen.pl2{background:var(--lv2);color:var(--on-lv2);border-color:transparent}
+.pollen.pl3{background:var(--lv3);color:var(--on-lv3);border-color:transparent}
+.pollen.pl1 b,.pollen.pl2 b,.pollen.pl3 b,.pollen.pl0 b{color:inherit}
+.prose a,ol.steps a{color:var(--accent);font-weight:700}
+.medcat + .medcat{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.medhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.medhead .qlabel small{margin-left:0;display:block}
+.medrows{display:flex;flex-direction:column;gap:8px}
+.medrow{display:flex;align-items:center;gap:8px;background:var(--accent-soft);border-radius:12px;padding:6px 6px 6px 14px}
+.medrow .name{flex:1;font-weight:700;min-width:0;overflow-wrap:anywhere;text-align:left;border:0;background:none;padding:6px 0}
+.stepper{display:flex;align-items:center;gap:4px;flex:none}
+.stepper button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:1.2rem;display:grid;place-items:center}
+.stepper output{min-width:4.2em;text-align:center;font-variant-numeric:tabular-nums;font-size:.9rem}
+.stepper output b{font-size:1.1rem}
+.nonebtn{align-self:flex-start;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 14px;font-size:.88rem;min-height:40px}
+.nonebtn.on{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:700}
+
+.wb{display:flex;align-items:center;gap:14px}
+.wbval{font-family:var(--f-display);font-size:2rem;min-width:2.2ch;text-align:center;font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;accent-color:var(--accent);height:44px;min-width:0}
+.wbends{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+
+.banner{background:var(--warn-bg);color:var(--warn-ink);border-radius:var(--r);padding:12px 14px;font-size:.9rem;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+.banner .btn{padding:8px 12px;min-height:38px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tab-h) + 14px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:.9rem;z-index:30;max-width:calc(100% - 32px);text-align:center}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);height:var(--tab-h)}
+.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.78rem;color:var(--muted)}
+.tab svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{color:var(--accent);font-weight:700}
+
+/* Verlauf */
+.periods{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px}
+.heatwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.heat{display:grid;gap:2px;padding:10px 10px 10px 0;width:max-content}
+.heat .rl{position:sticky;left:0;background:var(--surface);font-size:.78rem;padding:0 8px 0 10px;display:flex;align-items:center;white-space:nowrap;z-index:1;height:22px}
+.heat .rl.sep{margin-top:8px}
+.heat .c{height:22px;border-radius:4px;font-size:.66rem;display:grid;place-items:center;font-variant-numeric:tabular-nums;border:0;padding:0}
+.heat .c.sep{margin-top:8px}
+.heat .c.na{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+.heat .c.l0{background:var(--lv0);color:var(--on-lv0)} .heat .c.l1{background:var(--lv1);color:var(--on-lv1)}
+.heat .c.l2{background:var(--lv2);color:var(--on-lv2)} .heat .c.l3{background:var(--lv3);color:var(--on-lv3)}
+.heat .c.med{background:var(--accent);color:var(--on-accent);font-weight:700}
+.heat .c.nomed{background:var(--lv0)}
+.heat .dh{font-size:.62rem;color:var(--muted);text-align:center;height:16px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:visible}
+.heat .dh.today{color:var(--pollen);font-weight:700}
+.keyrow{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.78rem;color:var(--muted);margin-top:10px;align-items:center}
+.keyrow i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+
+.stats{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;font-size:.9rem}
+.bar{position:relative;height:10px;background:var(--lv0);border-radius:5px;overflow:hidden;grid-column:1/-1;margin-top:-4px}
+.bar span{position:absolute;inset:0 auto 0 0;background:var(--lv2);border-radius:5px}
+.statnum{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.85rem;text-align:right}
+.days{display:flex;flex-direction:column;gap:8px}
+.day{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;width:100%}
+.dayhead{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.dayhead span{font-weight:400;color:var(--muted);font-size:.88rem}
+.mini{display:flex;flex-wrap:wrap;gap:5px}
+.mini em{font-style:normal;font-size:.76rem;padding:2px 8px;border-radius:999px}
+.mini em.l1{background:var(--lv1);color:var(--on-lv1)} .mini em.l2{background:var(--lv2);color:var(--on-lv2)} .mini em.l3{background:var(--lv3);color:var(--on-lv3)}
+.mini em.m{background:var(--accent-soft);color:var(--ink)}
+.empty{text-align:center;color:var(--muted);padding:24px 14px;display:flex;flex-direction:column;gap:12px;align-items:center}
+
+/* Daten */
+.prose{font-size:.92rem;color:var(--muted);margin:0}
+.prose b{color:var(--ink)}
+ol.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+.manage{display:flex;flex-direction:column;gap:6px}
+.mitem{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:.95rem}
+.mitem:last-child{border-bottom:0}
+.mitem button{border:0;background:none;color:var(--danger);font-size:.85rem;padding:8px}
+.manage h3{font-size:.85rem;color:var(--muted);margin-top:8px}
+.row2{display:flex;gap:8px;flex-wrap:wrap}
+.row2 > *{flex:1 1 140px}
+.fallback textarea{font-family:ui-monospace,Menlo,monospace;font-size:.75rem;min-height:140px}
+.confirm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.9rem}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<nav class="tabs" aria-label="Bereiche"><div class="in">
+  <button class="tab" data-tab="heute" id="tab-heute"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>Erfassen</button>
+  <button class="tab" data-tab="verlauf" id="tab-verlauf"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4M7 13h2M11 13h2M15 13h2M7 17h2M11 17h2"/></svg>Verlauf</button>
+  <button class="tab" data-tab="daten" id="tab-daten"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Daten</button>
+</div></nav>
+
+<script>
+(function(){
+const KEY='pollen-tagebuch-v1';
+const SYMS=[
+ {k:'verstopft',l:'Verstopfte Nase',g:'nase'},
+ {k:'laufend',l:'Laufende Nase',g:'nase'},
+ {k:'husten',l:'Husten',g:'asthma'},
+ {k:'atemnot',l:'Atemnot',g:'asthma'},
+ {k:'pfeifen',l:'Pfeifendes Atmen',g:'asthma'},
+ {k:'erwachen',l:'Nächtliches Erwachen',g:'asthma',hint:'wegen Atembeschwerden'},
+ {k:'knirschen',l:'Zähneknirschen',g:'nacht',hint:'in der Nacht'}];
+const LV=[{w:'Keine',d:'Keine Beschwerden'},{w:'Leicht',d:'Spürbar, stört aber nicht'},{w:'Mittel',d:'Störend, Alltag aber normal möglich'},{w:'Stark',d:'Beeinträchtigt Alltag oder Schlaf deutlich'}];
+const SMELL=[{v:'normal',l:'Ja, normal',lv:0},{v:'eingeschraenkt',l:'Eingeschränkt',lv:2},{v:'gar_nicht',l:'Gar nicht',lv:3}];
+const MEDS=[
+ {k:'antihist',l:'Antihistaminika',u1:'Tablette',un:'Tabletten',short:'Tabl.',ph:'Name, z. B. Cetirizin'},
+ {k:'nasal',l:'Nasenspray',u1:'Sprühstoss',un:'Sprühstösse',short:'Stösse',ph:'Name des Nasensprays'},
+ {k:'asthma_lang',l:'Asthma-Spray Langzeit',u1:'Hub',un:'Hübe',short:'Hübe',ph:'Name des Langzeit-Sprays'},
+ {k:'asthma_kurz',l:'Asthma-Spray Notfall',sub:'kurzwirksam',u1:'Hub',un:'Hübe',short:'Hübe',ph:'Name des Notfall-Sprays'}];
+const TOTAL=1+SYMS.length+1+MEDS.length+1;
+
+let storageOK=true;
+let S=load();
+let ui={tab:'heute',date:today(),adding:null,period:30,confirmDel:false,reportP:'90',msg:null,fallback:null,toastT:null};
+
+function load(){
+  const def={v:1,entries:{},places:['Zürich','Tegna','Andermatt'],meds:{antihist:[],nasal:[],asthma_lang:[],asthma_kurz:[]},lastBackup:null,pollen:{},placeStation:{'Zürich':'PZH','Tegna':'PLO','Andermatt':'PLZ'}};
+  try{const raw=localStorage.getItem(KEY); if(!raw) return def;
+    const d=JSON.parse(raw); d.entries=d.entries||{}; d.places=d.places||def.places; d.meds=Object.assign(def.meds,d.meds||{});
+    d.pollen=d.pollen||{}; d.placeStation=Object.assign(def.placeStation,d.placeStation||{}); return d;}
+  catch(e){storageOK=false; return def;}
+}
+function persist(){ try{localStorage.setItem(KEY,JSON.stringify(S)); storageOK=true;}catch(e){storageOK=false;} }
+
+function pad(n){return String(n).padStart(2,'0')}
+function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function today(){return iso(new Date())}
+function parse(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function addDays(s,n){const d=parse(s);d.setDate(d.getDate()+n);return iso(d)}
+function fmtLong(s){return parse(s).toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'long'})}
+function fmtShort(s){return parse(s).toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'short'})}
+function fmtNum(s){return parse(s).toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'})}
+function esc(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function daysBetween(a,b){return Math.round((parse(b)-parse(a))/864e5)}
+
+function entry(d){return S.entries[d]}
+function ensure(d){if(!S.entries[d]) S.entries[d]={s:{},meds:{},none:{}}; const e=S.entries[d]; e.s=e.s||{}; e.meds=e.meds||{}; e.none=e.none||{}; return e}
+function isEmpty(e){
+  if(!e) return true;
+  return !e.smell && !Object.keys(e.s||{}).length && !e.place && !Object.values(e.meds||{}).some(o=>o&&Object.keys(o).length) && !Object.values(e.none||{}).some(Boolean) && e.wb==null && !(e.notes||'').trim();
+}
+function touch(d){const e=S.entries[d]; if(e){ if(isEmpty(e)) delete S.entries[d]; else e.updated=Date.now(); } persist();}
+function answered(e){
+  if(!e) return 0; let n=0;
+  if(e.smell) n++; SYMS.forEach(s=>{if(e.s&&e.s[s.k]!=null) n++}); if(e.place) n++;
+  MEDS.forEach(m=>{if((e.meds[m.k]&&Object.keys(e.meds[m.k]).length)||e.none[m.k]) n++});
+  if(e.wb!=null) n++; return n;
+}
+function medTotal(e,k){if(!e||!e.meds||!e.meds[k]) return 0; return Object.values(e.meds[k]).reduce((a,b)=>a+b,0)}
+
+/* ---------- Pollen ---------- */
+const PTYPES=[{k:'hasel',l:'Hasel',m:['cory','hasel'],g:'t'},{k:'erle',l:'Erle',m:['alnu','erle'],g:'t'},{k:'esche',l:'Esche',m:['frax','esche'],g:'t'},
+  {k:'birke',l:'Birke',m:['betu','birk'],g:'t'},{k:'buche',l:'Buche',m:['fagu','buche'],g:'t'},{k:'eiche',l:'Eiche',m:['quer','eiche'],g:'t'},{k:'graeser',l:'Gräser',m:['poac','gras'],g:'g'}];
+const PLV=['keine','schwach','mässig','stark','sehr stark'];
+const STATIONS={PBS:'Basel',PBE:'Bern',PBU:'Buchs SG',PCF:'La Chaux-de-Fonds',PDS:'Davos',PGE:'Genf',PLS:'Lausanne',PLO:'Locarno',PLU:'Lugano',PLZ:'Luzern',PMU:'Münsterlingen',PNE:'Neuenburg',PSN:'Sion',PVI:'Visp',PZH:'Zürich'};
+function stName(a){return STATIONS[a]||('Station '+a)}
+function plevel(t,v){if(v==null||!isFinite(v)) return null; const th=t.g==='g'?[1,20,50,150]:[1,11,70,300]; let l=0; th.forEach((x,i)=>{if(v>=x) l=i+1}); return l}
+function pollenFor(d,place){
+  if(!place) return {state:'noplace'};
+  const st=S.placeStation[place]; if(st==='') return {state:'abroad'}; if(!st) return {state:'unmapped'};
+  const day=S.pollen[st]&&S.pollen[st][d]; if(!day) return {state:'nodata',st};
+  const items=PTYPES.filter(t=>day[t.k]!=null).map(t=>({t,v:day[t.k],l:plevel(t,day[t.k])}));
+  let best=null; items.forEach(i=>{if(!best||i.l>best.l||(i.l===best.l&&i.v>best.v)) best=i});
+  return {state:'ok',st,items,best};
+}
+function pollenText(p){ if(!p||p.state!=='ok') return ''; const act=p.items.filter(i=>i.l>0).sort((a,b)=>b.l-a.l||b.v-a.v); return act.length?act.map(i=>i.t.l+' '+PLV[i.l]).join(', '):'keine Pollen'; }
+function pollenLine(d,place){
+  const p=pollenFor(d,place), go='<button class="linkbtn" data-act="gotab" data-tab="daten">';
+  if(p.state==='ok') return `<div class="pollen pl${Math.min(3,p.best?p.best.l:0)}"><b>Pollen ${esc(stName(p.st))}:</b> ${esc(pollenText(p))}</div>`;
+  if(p.state==='abroad') return `<div class="pollen">Ausland: keine Pollendaten</div>`;
+  if(p.state==='unmapped') return `<div class="pollen">Für ${esc(place)} ist noch keine Pollen-Station gewählt. ${go}Station wählen</button></div>`;
+  if(p.state==='nodata') return `<div class="pollen">Noch keine Pollendaten von ${esc(stName(p.st))} für diesen Tag. ${go}Daten laden</button></div>`;
+  return '';
+}
+function parsePollenCSV(txt,filename){
+  txt=txt.replace(/^﻿/,''); const lines=txt.split(/\r?\n/).filter(l=>l.trim()); if(lines.length<2) throw new Error('leer');
+  const delim=(lines[0].match(/;/g)||[]).length>=(lines[0].match(/,/g)||[]).length?';':',';
+  const clean=x=>(x||'').trim().replace(/^"|"$/g,'');
+  const head=lines[0].split(delim).map(h=>clean(h).toLowerCase());
+  const iSt=head.findIndex(h=>h.includes('station'));
+  const iTs=head.findIndex(h=>h.includes('timestamp')||h.includes('datum')||h.includes('date')||h==='time');
+  const cols=[]; head.forEach((h,i)=>{if(i===iSt||i===iTs) return; const t=PTYPES.find(t=>t.m.some(m=>h.includes(m))); if(!t) return;
+    const j=cols.findIndex(c=>c.k===t.k); const pri=/0$/.test(h)?0:1;
+    if(j<0) cols.push({i,k:t.k,pri}); else if(pri<cols[j].pri) cols[j]={i,k:t.k,pri};});
+  if(iTs<0||!cols.length) throw new Error('format');
+  const fnSt=((filename||'').match(/ogd-pollen_([a-z0-9]{3})_/i)||[])[1];
+  const acc={};
+  for(let r=1;r<lines.length;r++){
+    const c=lines[r].split(delim).map(clean); const ts=c[iTs]||''; let m, date=null;
+    if((m=ts.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/))) date=m[3]+'-'+pad(+m[2])+'-'+pad(+m[1]);
+    else if((m=ts.match(/(\d{4})-(\d{2})-(\d{2})/))) date=m[1]+'-'+m[2]+'-'+m[3];
+    else if((m=ts.match(/^(\d{4})(\d{2})(\d{2})/))) date=m[1]+'-'+m[2]+'-'+m[3];
+    if(!date) continue;
+    const st=((iSt>=0&&c[iSt])||fnSt||'').toUpperCase(); if(!st) continue;
+    cols.forEach(({i,k})=>{const v=parseFloat((c[i]||'').replace(',','.')); if(!isFinite(v)||v<0) return;
+      const a=((acc[st]=acc[st]||{})[date]=acc[st][date]||{}); a[k]=a[k]||[0,0]; a[k][0]+=v; a[k][1]++;});
+  }
+  let n=0; const sts=Object.keys(acc); if(!sts.length) throw new Error('format');
+  sts.forEach(st=>{S.pollen[st]=S.pollen[st]||{}; Object.entries(acc[st]).forEach(([d,o])=>{const day={}; Object.entries(o).forEach(([k,[s,c]])=>{day[k]=Math.round(s/c)}); S.pollen[st][d]=day; n++;});});
+  return {sts,n};
+}
+
+function toast(t){
+  let el=document.getElementById('toast'); if(!el){el=document.createElement('div');el.id='toast';el.className='toast';el.setAttribute('role','status');document.body.appendChild(el)}
+  el.textContent=t; el.hidden=false; clearTimeout(ui.toastT); ui.toastT=setTimeout(()=>{el.hidden=true},2200);
+}
+
+/* ---------- Erfassen ---------- */
+function scaleRow(key,val){
+  return '<div class="scale" role="group">'+LV.map((l,i)=>
+    `<button class="lv l${i}${val===i?' on':''}" data-act="sym" data-k="${key}" data-v="${i}" aria-pressed="${val===i}"><b>${i}</b><span>${l.w}</span></button>`).join('')+'</div>'+
+    `<div class="meaning">${val!=null?esc(LV[val].d):'Noch nicht erfasst'}</div>`;
+}
+function symQ(s,e){
+  const v=e&&e.s?e.s[s.k]:undefined;
+  return `<div class="q"><div class="qlabel">${s.l}${s.hint?`<small>${s.hint}</small>`:''}</div>${scaleRow(s.k,v)}</div>`;
+}
+function legend(){
+  return `<details class="legendbox card"><summary>Was bedeuten 0 bis 3?</summary><div class="legend">${LV.map((l,i)=>`<i class="l${i}">${i}</i><span><b>${l.w}</b>: ${l.d}</span>`).join('')}</div></details>`;
+}
+function renderHeute(){
+  const d=ui.date, e=entry(d), isToday=d===today();
+  const n=answered(e);
+  let h=`<header class="top"><div class="datenav">
+    <button class="iconbtn" data-act="prev" aria-label="Vorheriger Tag">‹</button>
+    <h1>${isToday?'Heute, ':''}${esc(fmtLong(d))}</h1>
+    <button class="iconbtn" data-act="next" aria-label="Nächster Tag" ${isToday?'disabled':''}>›</button></div>
+    <div class="sub"><span class="progress">${n} von ${TOTAL} erfasst</span>${e&&e.updated?`<span>· gespeichert ${new Date(e.updated).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})}</span>`:''}${!isToday?'<button class="linkbtn" data-act="today">Zu heute</button>':''}</div></header>`;
+  if(!storageOK) h+=`<div class="banner">Dieser Browser erlaubt kein Speichern. Öffne die App in Safari (nicht im privaten Modus).</div>`;
+  const cnt=Object.keys(S.entries).length;
+  if(cnt>=3 && (!S.lastBackup || daysBetween(S.lastBackup.slice(0,10),today())>=14))
+    h+=`<div class="banner"><span>${S.lastBackup?'Letztes Backup vor '+daysBetween(S.lastBackup.slice(0,10),today())+' Tagen.':'Noch kein Backup gespeichert.'}</span><button class="btn" data-act="gotab" data-tab="daten">Jetzt sichern</button></div>`;
+
+  h+=`<section class="group"><div class="grouphead"><h2>Nase</h2></div><div class="card">
+    <div class="q"><div class="qlabel">Riechst du heute etwas?</div><div class="seg">${SMELL.map(o=>`<button class="segbtn${e&&e.smell===o.v?' on':''}" data-act="smell" data-v="${o.v}" aria-pressed="${!!(e&&e.smell===o.v)}">${o.l}</button>`).join('')}</div></div>
+    ${SYMS.filter(s=>s.g==='nase').map(s=>symQ(s,e)).join('')}</div>${legend()}</section>`;
+  h+=`<section class="group"><div class="grouphead"><h2>Asthma</h2></div><div class="card">${SYMS.filter(s=>s.g==='asthma').map(s=>symQ(s,e)).join('')}</div></section>`;
+  h+=`<section class="group"><div class="grouphead"><h2>Nacht</h2></div><div class="card">${SYMS.filter(s=>s.g==='nacht').map(s=>symQ(s,e)).join('')}</div></section>`;
+
+  const places=S.places.slice(); if(e&&e.place&&!places.includes(e.place)) places.push(e.place);
+  h+=`<section class="group"><div class="grouphead"><h2>Aufenthaltsort</h2></div><div class="card"><div class="q">
+    <div class="chips">${places.map(p=>`<button class="chip${e&&e.place===p?' on':''}" data-act="place" data-v="${esc(p)}" aria-pressed="${!!(e&&e.place===p)}">${esc(p)}</button>`).join('')}
+    ${ui.adding==='place'?'':'<button class="chip ghost" data-act="addopen" data-v="place">+ Ort hinzufügen</button>'}</div>
+    ${ui.adding==='place'?`<form class="addrow" data-form="place"><input type="text" id="addinput" placeholder="Neuer Ort" autocomplete="off" enterkeyhint="done"><button class="btn" type="submit">Speichern</button></form>`:''}
+    ${e&&e.place?pollenLine(d,e.place):''}
+  </div></div></section>`;
+
+  h+=`<section class="group"><div class="grouphead"><h2>Medikamente</h2></div><div class="card">`+MEDS.map(m=>{
+    const sel=(e&&e.meds[m.k])||{}, none=!!(e&&e.none[m.k]);
+    const names=S.meds[m.k].slice(); Object.keys(sel).forEach(x=>{if(!names.includes(x)) names.push(x)});
+    const on=names.filter(x=>sel[x]!=null), off=names.filter(x=>sel[x]==null);
+    return `<div class="medcat q"><div class="medhead"><div class="qlabel">${m.l}${m.sub?`<small>${m.sub}</small>`:''}</div><span class="prose">in ${m.un}</span></div>
+      ${on.length?`<div class="medrows">${on.map(x=>`<div class="medrow"><button class="name" data-act="medtoggle" data-c="${m.k}" data-v="${esc(x)}" aria-label="${esc(x)} entfernen">${esc(x)}</button>
+        <div class="stepper"><button data-act="medstep" data-c="${m.k}" data-v="${esc(x)}" data-d="-1" aria-label="Weniger">−</button><output><b>${sel[x]}</b> ${m.short}</output><button data-act="medstep" data-c="${m.k}" data-v="${esc(x)}" data-d="1" aria-label="Mehr">+</button></div></div>`).join('')}</div>`:''}
+      <div class="chips">${off.map(x=>`<button class="chip" data-act="medtoggle" data-c="${m.k}" data-v="${esc(x)}">${esc(x)}</button>`).join('')}
+        ${ui.adding===m.k?'':`<button class="chip ghost" data-act="addopen" data-v="${m.k}">+ ${names.length?'Weiteres':'Medikament'} hinzufügen</button>`}</div>
+      ${ui.adding===m.k?`<form class="addrow" data-form="${m.k}"><input type="text" id="addinput" placeholder="${m.ph}" autocomplete="off" enterkeyhint="done"><button class="btn" type="submit">Speichern</button></form>`:''}
+      ${on.length?'':`<button class="nonebtn${none?' on':''}" data-act="none" data-c="${m.k}" aria-pressed="${none}">Heute nichts genommen</button>`}
+    </div>`;}).join('')+`</div></section>`;
+
+  const wb=e&&e.wb!=null?e.wb:null;
+  h+=`<section class="group"><div class="grouphead"><h2>Allgemeinbefinden</h2></div><div class="card"><div class="q">
+    <div class="wb"><div class="wbval" id="wbval">${wb==null?'–':wb}</div><input type="range" id="wb" min="0" max="10" step="1" value="${wb==null?5:wb}" aria-label="Allgemeinbefinden 0 bis 10"></div>
+    <div class="wbends"><span>0 sehr schlecht</span><span>10 ausgezeichnet</span></div>
+    <div class="meaning" id="wbhint">${wb==null?'Regler bewegen oder antippen, um zu erfassen':''}</div></div></div></section>`;
+  h+=`<section class="group"><div class="grouphead"><h2>Notizen</h2></div><div class="card"><textarea id="notes" placeholder="z. B. lange draussen, Gewitter, neue Bettwäsche">${esc(e&&e.notes||'')}</textarea></div></section>`;
+  if(e) h+= ui.confirmDel?`<div class="confirm"><span>Eintrag vom ${esc(fmtShort(d))} wirklich löschen?</span><button class="btn danger" data-act="delyes">Löschen</button><button class="btn quiet" data-act="delno">Abbrechen</button></div>`
+      :`<button class="btn danger" data-act="delask">Eintrag dieses Tages löschen</button>`;
+  return h;
+}
+
+/* ---------- Verlauf ---------- */
+function lvFromWb(w){return w>=8?0:w>=6?1:w>=3?2:3}
+function renderVerlauf(){
+  const p=ui.period, end=today(), dates=[]; for(let i=p-1;i>=0;i--) dates.push(addDays(end,-i));
+  const es=dates.map(d=>entry(d)), rec=es.filter(Boolean).length;
+  const cw=p===7?40:p===30?24:14, showN=p<=30;
+  let h=`<header class="top"><div class="pagetitle">Verlauf</div><div class="sub">${rec} von ${p} Tagen erfasst</div></header>`;
+  h+=`<div class="periods" role="group">${[7,30,90].map(x=>`<button class="segbtn${p===x?' on':''}" data-act="period" data-v="${x}" aria-pressed="${p===x}">${x} Tage</button>`).join('')}</div>`;
+  if(!rec){ return h+`<div class="card empty"><b>Noch keine Einträge in diesem Zeitraum.</b><span>Sobald du Tage erfasst, siehst du hier, wie sich Nase, Asthma und Medikamente entwickeln.</span><button class="btn" data-act="gotab" data-tab="heute">Heute erfassen</button></div>`;}
+  const cols=`grid-template-columns:auto repeat(${p},${cw}px)`;
+  let g=`<div class="heat" style="${cols}"><div class="rl" style="height:16px"></div>`;
+  dates.forEach(d=>{const dd=parse(d).getDate(); const show=showN||dd===1||dd%10===0; g+=`<div class="dh${d===end?' today':''}">${show?dd:''}</div>`});
+  const row=(label,fn,sep)=>{g+=`<div class="rl${sep?' sep':''}">${label}</div>`; dates.forEach((d,i)=>{const r=fn(es[i],d); g+=`<button class="c ${r.c}${sep?' sep':''}" data-act="open" data-d="${d}" aria-label="${esc(fmtShort(d))}: ${esc(r.t||'')}" title="${esc(fmtShort(d))}">${showN&&r.n!=null?r.n:''}</button>`});};
+  row('Pollen',(e,d)=>{if(!e||!e.place) return {c:'na'}; const p=pollenFor(d,e.place); return p.state==='ok'?{c:'l'+Math.min(3,p.best?p.best.l:0),t:pollenText(p)}:{c:'na'}});
+  row('Riechen',e=>{const o=e&&SMELL.find(x=>x.v===e.smell); return o?{c:'l'+o.lv,t:o.l}:{c:'na'}},true);
+  SYMS.forEach((s,i)=>row(s.l,e=>{const v=e&&e.s[s.k]; return v!=null?{c:'l'+v,n:v,t:LV[v].w}:{c:'na'}},s.g!==SYMS[i-1]?.g&&i>0));
+  MEDS.forEach((m,i)=>row(m.l.replace('Asthma-Spray','Asthma'),e=>{if(!e) return {c:'na'}; const t=medTotal(e,m.k); if(t) return {c:'med',n:t,t:t+' '+m.un}; if(e.none[m.k]) return {c:'nomed',t:'nichts genommen'}; return {c:'na'}},i===0));
+  row('Befinden',e=>e&&e.wb!=null?{c:'l'+lvFromWb(e.wb),n:e.wb,t:'Befinden '+e.wb}:{c:'na'},true);
+  g+='</div>';
+  h+=`<section class="group"><div class="grouphead"><h2>Übersicht</h2><span class="prose">Tag antippen zum Bearbeiten</span></div><div class="heatwrap" id="heatwrap">${g}</div>
+    <div class="keyrow">${LV.map((l,i)=>`<span><i style="background:var(--lv${i})"></i>${i} ${l.w}</span>`).join('')}<span><i style="background:var(--accent)"></i>Medikament genommen</span><span><i style="box-shadow:inset 0 0 0 1px var(--line)"></i>nicht erfasst</span></div></section>`;
+
+  let st='';
+  SYMS.forEach(s=>{const vals=es.filter(e=>e&&e.s[s.k]!=null).map(e=>e.s[s.k]); if(!vals.length) return;
+    const avg=vals.reduce((a,b)=>a+b,0)/vals.length, hi=vals.filter(v=>v>=2).length;
+    st+=`<span>${s.l}</span><span class="statnum">Ø ${avg.toFixed(1).replace('.',',')} · ${hi}× mittel/stark</span><div class="bar"><span style="width:${avg/3*100}%"></span></div>`;});
+  const sm=es.filter(e=>e&&e.smell); if(sm.length){const bad=sm.filter(e=>e.smell!=='normal').length; st=`<span>Geruchssinn eingeschränkt</span><span class="statnum">an ${bad} von ${sm.length} Tagen</span>`+st;}
+  let ms=MEDS.map(m=>{const n=es.filter(e=>medTotal(e,m.k)>0).length; return `<span>${m.l}</span><span class="statnum">an ${n} Tagen</span>`}).join('');
+  h+=`<section class="group"><div class="grouphead"><h2>Durchschnitt (Skala 0–3)</h2></div><div class="card"><div class="stats">${st||'<span class="prose">Noch keine Symptome erfasst.</span>'}</div></div>
+     <div class="card"><div class="stats">${ms}</div></div></section>`;
+
+  const list=dates.slice().reverse().filter(d=>entry(d));
+  h+=`<section class="group"><div class="grouphead"><h2>Einträge</h2></div><div class="days">${list.map(d=>{const e=entry(d);
+    const pf=e.place?pollenFor(d,e.place):null;
+    const chips=(pf&&pf.state==='ok'&&pf.best&&pf.best.l>0?`<em class="l${Math.min(3,pf.best.l)}">Pollen: ${esc(pollenText(pf))}</em>`:'')+SYMS.filter(s=>e.s[s.k]>=1).map(s=>`<em class="l${e.s[s.k]}">${s.l} ${e.s[s.k]}</em>`).join('')+
+      MEDS.filter(m=>medTotal(e,m.k)).map(m=>`<em class="m">${esc(Object.entries(e.meds[m.k]).map(([n,a])=>n+' '+a).join(', '))}</em>`).join('');
+    return `<button class="day" data-act="open" data-d="${d}"><div class="dayhead">${esc(fmtShort(d))}<span>${esc(e.place||'')}${e.wb!=null?' · Befinden '+e.wb:''}</span></div>${chips?`<div class="mini">${chips}</div>`:'<span class="prose">Keine Beschwerden erfasst</span>'}${e.notes?`<span class="prose">${esc(e.notes)}</span>`:''}</button>`}).join('')}</div></section>`;
+  return h;
+}
+
+/* ---------- Daten ---------- */
+function renderDaten(){
+  const cnt=Object.keys(S.entries).length;
+  let h=`<header class="top"><div class="pagetitle">Daten</div><div class="sub">${cnt} ${cnt===1?'Tag':'Tage'} gespeichert</div></header>`;
+  if(ui.pending) h+=`<div class="banner"><span>Datei bereit: <b>${esc(ui.pending.file.name)}</b></span><span class="row2" style="flex:0 0 auto"><button class="btn" data-act="sharepending">Sichern</button><button class="btn quiet" data-act="pendingclose">Abbrechen</button></span></div>`;
+  if(ui.msg) h+=`<div class="banner"><span>${esc(ui.msg)}</span><button class="btn quiet" data-act="msgclose">OK</button></div>`;
+  if(ui.fallback) h+=`<section class="group fallback"><div class="card q"><div class="qlabel">${esc(ui.fallback.title)}</div><p class="prose">Die Datei konnte nicht gespeichert werden. Kopiere den Inhalt und füge ihn z. B. in eine Notiz oder E-Mail an dich ein.</p><textarea id="fbtext" readonly>${esc(ui.fallback.text)}</textarea><div class="row2"><button class="btn" data-act="copyfb">Kopieren</button><button class="btn quiet" data-act="closefb">Schliessen</button></div></div></section>`;
+  h+=`<section class="group"><div class="grouphead"><h2>Backup</h2></div><div class="card q">
+    <p class="prose">Deine Einträge sind <b>nur auf diesem Gerät</b> gespeichert. Sichere sie regelmässig als Datei, z. B. in iCloud Drive. ${S.lastBackup?'Letztes Backup: <b>'+esc(fmtNum(S.lastBackup.slice(0,10)))+'</b>.':'<b>Noch kein Backup gespeichert.</b>'}</p>
+    <div class="row2"><button class="btn" data-act="backup">Backup speichern</button><label class="btn quiet" style="display:grid;place-items:center;text-align:center;cursor:pointer">Backup laden<input type="file" id="importfile" accept=".json,application/json" hidden></label></div>
+  </div></section>`;
+  h+=`<section class="group"><div class="grouphead"><h2>Auswerten</h2></div><div class="card q">
+    <div class="qlabel">Tabelle für Excel oder Numbers</div><p class="prose">Alle Tage als CSV-Datei, eine Zeile pro Tag. Gut für eigene Auswertungen am Computer.</p>
+    <button class="btn wide" data-act="csv">Tabelle speichern (.csv)</button>
+    <div class="q"><div class="qlabel">Bericht für den Arzt</div><p class="prose">PDF mit Zusammenfassung und allen Tagen des Zeitraums.</p>
+    <div class="row2"><select id="reportp" aria-label="Zeitraum"><option value="30"${ui.reportP==='30'?' selected':''}>Letzte 30 Tage</option><option value="90"${ui.reportP==='90'?' selected':''}>Letzte 90 Tage</option><option value="365"${ui.reportP==='365'?' selected':''}>Letztes Jahr</option><option value="all"${ui.reportP==='all'?' selected':''}>Alle Daten</option></select>
+    <button class="btn" data-act="pdf">Bericht speichern (.pdf)</button></div></div>
+  </div></section>`;
+  const imported=Object.keys(S.pollen).sort((a,b)=>stName(a).localeCompare(stName(b)));
+  const stOpts=[...imported,...Object.keys(STATIONS).filter(a=>!imported.includes(a)).sort((a,b)=>stName(a).localeCompare(stName(b)))];
+  h+=`<section class="group"><div class="grouphead"><h2>Pollendaten</h2></div><div class="card q">
+    <p class="prose">Messwerte von MeteoSchweiz, alle paar Tage selbst laden:</p>
+    <ol class="steps"><li>Öffne den <a href="https://www.meteoswiss.ch/ogd/download-gui" target="_blank" rel="noopener">Daten-Download von MeteoSchweiz</a>. Alternativ: <a href="https://www.meteoschweiz.admin.ch/service-und-publikationen/service/open-data.html#ogd-cat=surface&amp;ogd-q=poll&amp;ogd-fmt=&amp;ogd-kw=" target="_blank" rel="noopener">Open-Data-Übersicht Pollen</a> oder der <a href="https://data.geo.admin.ch/browser/index.html#/collections/ch.meteoschweiz.ogd-pollen" target="_blank" rel="noopener">Datenkatalog</a>.</li>
+    <li>Wähle eine Station, z. B. <b>Zürich</b>, <b>Locarno</b> oder <b>Luzern</b>.</li>
+    <li>Lade die Datei, deren Name auf <b>_d_recent.csv</b> endet (Tageswerte des laufenden Jahres).</li>
+    <li>Tippe hier auf <b>Pollendatei laden</b> und wähle die Datei(en) aus.</li></ol>
+    <label class="btn" style="display:grid;place-items:center;text-align:center;cursor:pointer">Pollendatei laden<input type="file" id="pollenfile" accept=".csv,text/csv,text/plain" multiple hidden></label>
+    ${imported.length?`<div class="manage">${imported.map(a=>{const ds=Object.keys(S.pollen[a]).sort(); return `<div class="mitem"><span><b>${esc(stName(a))}</b> · Daten bis ${esc(fmtNum(ds[ds.length-1]))}</span><button data-act="rmpollen" data-c="${esc(a)}">Entfernen</button></div>`}).join('')}</div>`:'<p class="prose">Noch keine Pollendaten geladen.</p>'}
+    <div class="qlabel">Station pro Ort</div>
+    <div class="manage">${S.places.map((p,i)=>{const cur=S.placeStation[p]; return `<div class="mitem"><span>${esc(p)}</span><select id="ps-${i}" data-place="${esc(p)}" aria-label="Pollen-Station für ${esc(p)}" style="width:auto;max-width:60%">
+      <option value="-"${cur==null?' selected':''}>bitte wählen</option><option value=""${cur===''?' selected':''}>Ausland (keine Daten)</option>
+      ${stOpts.map(a=>`<option value="${esc(a)}"${cur===a?' selected':''}>${esc(stName(a))}${imported.includes(a)?'':' (noch keine Daten)'}</option>`).join('')}</select></div>`}).join('')}</div>
+    <p class="prose">Stärke nach Tagesmittel in Pollen pro m³, angelehnt an die Klassen von MeteoSchweiz. Bäume: schwach ab 1, mässig ab 11, stark ab 70, sehr stark ab 300. Gräser: schwach ab 1, mässig ab 20, stark ab 50, sehr stark ab 150.</p>
+  </div></section>`;
+  h+=`<section class="group"><div class="grouphead"><h2>Erinnerung um 21:00</h2></div><div class="card q">
+    <p class="prose">So erinnert dich dein iPhone jeden Abend:</p>
+    <ol class="steps"><li>Öffne die App <b>Erinnerungen</b> und tippe auf <b>Neue Erinnerung</b>.</li>
+    <li>Titel: <b>Pollen-Tagebuch ausfüllen</b>.</li>
+    <li>Tippe auf <b>ⓘ</b>, aktiviere <b>Datum</b> und <b>Uhrzeit</b> und stelle <b>21:00</b> ein.</li>
+    <li>Bei <b>Wiederholen</b> wähle <b>Täglich</b>. Fertig.</li></ol>
+    <p class="prose">Öffne das Tagebuch danach immer über sein Symbol auf dem Home-Bildschirm.</p></div></section>`;
+  h+=`<section class="group"><div class="grouphead"><h2>Orte und Medikamente</h2></div><div class="card manage">
+    <p class="prose">Hier entfernst du Knöpfe, die du nicht mehr brauchst. Frühere Einträge bleiben unverändert.</p>
+    <h3>Orte</h3>${S.places.map((p,i)=>`<div class="mitem"><span>${esc(p)}</span><button data-act="rmplace" data-i="${i}">Entfernen</button></div>`).join('')||'<span class="prose">Keine</span>'}
+    ${MEDS.map(m=>`<h3>${m.l}</h3>${S.meds[m.k].map((x,i)=>`<div class="mitem"><span>${esc(x)}</span><button data-act="rmmed" data-c="${m.k}" data-i="${i}">Entfernen</button></div>`).join('')||'<span class="prose">Noch keine gespeichert</span>'}`).join('')}
+  </div></section>`;
+  h+=`<section class="group"><div class="grouphead"><h2>Gut zu wissen</h2></div><div class="card"><p class="prose">Öffne das Tagebuch immer über das Symbol auf dem Home-Bildschirm. Nur dort sind deine Daten dauerhaft gespeichert. Die Version in Safari hat einen eigenen, getrennten Speicher. Wenn du das Symbol löschst, werden auch die Daten gelöscht. Sichere deshalb regelmässig ein Backup, zum Beispiel in iCloud Drive.</p></div></section>`;
+  return h;
+}
+
+/* ---------- Export ---------- */
+function smellLabel(v){const o=SMELL.find(x=>x.v===v);return o?o.l:''}
+function medStr(e,k){return e&&e.meds[k]?Object.entries(e.meds[k]).map(([n,a])=>n+' ('+a+')').join(', '):(e&&e.none[k]?'keine':'')}
+function buildCSV(){
+  const pcell=(d,e)=>{const p=e.place?pollenFor(d,e.place):null; return p&&p.state==='ok'?[stName(p.st),pollenText(p),...PTYPES.map(t=>p.items.find(i=>i.t.k===t.k)?.v??'')]:['','',...PTYPES.map(()=>'')]};
+  const head=['Datum','Riechen',...SYMS.map(s=>s.l),'Ort','Pollen-Station','Pollen',...PTYPES.map(t=>t.l+' (Pollen/m³)'),...MEDS.flatMap(m=>[m.l,m.l+' Anzahl']),'Allgemeinbefinden','Notizen'];
+  const q=v=>{v=v==null?'':String(v); return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const rows=Object.keys(S.entries).sort().map(d=>{const e=S.entries[d];
+    return [d,smellLabel(e.smell),...SYMS.map(s=>e.s[s.k]),e.place,...pcell(d,e),...MEDS.flatMap(m=>[medStr(e,m.k),medTotal(e,m.k)||(e.none[m.k]?0:'')]),e.wb,e.notes].map(q).join(';')});
+  return '﻿'+[head.map(q).join(';'),...rows].join('\r\n');
+}
+function canShareFile(f){try{return !!(navigator.canShare&&navigator.canShare({files:[f]}))}catch(e){return false}}
+function fileType(n){return n.endsWith('.pdf')?'application/pdf':n.endsWith('.csv')?'text/csv':'application/json'}
+async function save(filename,data,fbTitle,fbText,isBackup){
+  const type=fileType(filename);
+  const blob=data instanceof Blob?data:new Blob([data],{type});
+  let file=null; try{file=new File([blob],filename,{type})}catch(e){file=null}
+  if(file&&canShareFile(file)){
+    try{await navigator.share({files:[file]}); return true;}
+    catch(err){
+      if(err&&err.name==='AbortError'){toast('Nicht gespeichert'); return false;}
+      ui.pending={file,isBackup:!!isBackup}; ui.tab='daten'; render(); window.scrollTo(0,0); return false;
+    }
+  }
+  try{const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000); return true;}
+  catch(e){ if(fbText!=null){ui.fallback={title:fbTitle,text:fbText}; render();} else {ui.msg='Die Datei konnte nicht gespeichert werden.'; render();} return false;}
+}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+async function buildPDF(){
+  if(!window.jspdf){ await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'); await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'); }
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const all=Object.keys(S.entries).sort(); const end=today();
+  const start=ui.reportP==='all'?(all[0]||end):addDays(end,-(Number(ui.reportP)-1));
+  const days=all.filter(d=>d>=start&&d<=end); const es=days.map(d=>S.entries[d]);
+  const green=[45,106,85];
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Heuschnupfen- und Asthma-Tagebuch',14,16);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text(`Zeitraum: ${fmtNum(start)} bis ${fmtNum(end)}   |   Erfasste Tage: ${days.length}   |   Erstellt am ${fmtNum(end)}`,14,23);
+  doc.text('Skala: 0 = keine Beschwerden, 1 = leicht (spürbar, stört nicht), 2 = mittel (störend, Alltag möglich), 3 = stark (beeinträchtigt Alltag oder Schlaf)',14,29);
+  const sumRows=SYMS.map(s=>{const v=es.filter(e=>e.s[s.k]!=null).map(e=>e.s[s.k]); if(!v.length) return [s.l,'-','-','-'];
+    return [s.l,(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1),String(v.filter(x=>x>=2).length),String(Math.max(...v))]});
+  const sm=es.filter(e=>e.smell); sumRows.unshift(['Geruchssinn eingeschränkt / fehlt', '-', sm.length?`${sm.filter(e=>e.smell!=='normal').length} von ${sm.length} Tagen`:'-','-']);
+  doc.autoTable({startY:34,head:[['Symptom','Durchschnitt','Tage mittel/stark','Maximum']],body:sumRows,theme:'grid',styles:{fontSize:9,cellPadding:1.6},headStyles:{fillColor:green},margin:{left:14},tableWidth:140});
+  const medRows=MEDS.map(m=>{const used=es.filter(e=>medTotal(e,m.k)>0); const names=[...new Set(used.flatMap(e=>Object.keys(e.meds[m.k])))];
+    return [m.l,String(used.length),names.join(', ')||'-']});
+  doc.autoTable({startY:34,head:[['Medikament','Tage genommen','Präparate']],body:medRows,theme:'grid',styles:{fontSize:9,cellPadding:1.6},headStyles:{fillColor:green},margin:{left:160},tableWidth:123});
+  const head=[['Datum','Riechen','Verst. Nase','Lauf. Nase','Husten','Atemnot','Pfeifen','Nachts wach','Zähneknirschen','Ort','Pollen','Medikamente','Befinden','Notizen']];
+  const body=days.map(d=>{const e=S.entries[d]; const meds=MEDS.map(m=>{const s=medStr(e,m.k); return s&&s!=='keine'?s:''}).filter(Boolean).join('; ');
+    const p=e.place?pollenFor(d,e.place):null; const pt=p&&p.state==='ok'?pollenText(p):(p&&p.state==='abroad'?'Ausland':'');
+    return [fmtNum(d),smellLabel(e.smell),...SYMS.map(s=>e.s[s.k]??''),e.place||'',pt,meds,e.wb??'',e.notes||'']});
+  const fill=[[227,235,230],[243,220,140],[235,163,82],[196,85,58]];
+  doc.autoTable({startY:Math.max(doc.lastAutoTable.finalY,0)+10,head,body,theme:'grid',styles:{fontSize:7.5,cellPadding:1.2,overflow:'linebreak'},headStyles:{fillColor:green,fontSize:7.5},
+    columnStyles:{0:{cellWidth:19},10:{cellWidth:30},11:{cellWidth:40},13:{cellWidth:42}},
+    didParseCell:(c)=>{if(c.section==='body'&&c.column.index>=2&&c.column.index<=8){const v=c.cell.raw; if(v!==''&&v!=null){c.cell.styles.fillColor=fill[v]; c.cell.styles.halign='center'; if(v===3) c.cell.styles.textColor=[255,255,255];}}},
+    margin:{left:14,right:14}});
+  const pages=doc.getNumberOfPages(); for(let i=1;i<=pages;i++){doc.setPage(i); doc.setFontSize(8); doc.setTextColor(120); doc.text(`Seite ${i} von ${pages}`,283,203,{align:'right'});}
+  return {blob:doc.output('blob'),start,end};
+}
+function importData(txt){
+  const d=JSON.parse(txt); if(!d||typeof d.entries!=='object') throw new Error('format');
+  let n=0;
+  Object.entries(d.entries).forEach(([k,e])=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!e) return; const cur=S.entries[k];
+    if(!cur||(e.updated||0)>=(cur.updated||0)){S.entries[k]=Object.assign({s:{},meds:{},none:{}},e); n++;} });
+  (d.places||[]).forEach(p=>{if(!S.places.includes(p)) S.places.push(p)});
+  MEDS.forEach(m=>((d.meds||{})[m.k]||[]).forEach(x=>{if(!S.meds[m.k].includes(x)) S.meds[m.k].push(x)}));
+  Object.entries(d.pollen||{}).forEach(([st,o])=>{S.pollen[st]=Object.assign(S.pollen[st]||{},o)});
+  Object.assign(S.placeStation,d.placeStation||{});
+  persist(); return n;
+}
+
+/* ---------- Render & events ---------- */
+const app=document.getElementById('app');
+function render(){
+  app.innerHTML= ui.tab==='heute'?renderHeute(): ui.tab==='verlauf'?renderVerlauf(): renderDaten();
+  document.querySelectorAll('.tab').forEach(t=>{const on=t.dataset.tab===ui.tab; t.classList.toggle('on',on); t.setAttribute('aria-current',on?'page':'false')});
+  if(ui.tab==='verlauf'){const w=document.getElementById('heatwrap'); if(w) w.scrollLeft=w.scrollWidth;}
+  const ai=document.getElementById('addinput'); if(ai) ai.focus();
+}
+function go(tab){ui.tab=tab; ui.adding=null; ui.confirmDel=false; render(); window.scrollTo(0,0);}
+document.querySelector('.tabs').addEventListener('click',ev=>{const b=ev.target.closest('.tab'); if(b) go(b.dataset.tab)});
+
+app.addEventListener('click',async ev=>{
+  const b=ev.target.closest('[data-act]'); if(!b) return;
+  const a=b.dataset.act, d=ui.date;
+  switch(a){
+    case 'prev': ui.date=addDays(d,-1); ui.adding=null; ui.confirmDel=false; render(); return;
+    case 'next': if(d<today()){ui.date=addDays(d,1); ui.adding=null; ui.confirmDel=false; render();} return;
+    case 'today': ui.date=today(); render(); return;
+    case 'gotab': go(b.dataset.tab); return;
+    case 'open': ui.date=b.dataset.d; go('heute'); return;
+    case 'smell': {const e=ensure(d); e.smell=e.smell===b.dataset.v?null:b.dataset.v; if(!e.smell) delete e.smell; break;}
+    case 'sym': {const e=ensure(d), v=Number(b.dataset.v); if(e.s[b.dataset.k]===v) delete e.s[b.dataset.k]; else e.s[b.dataset.k]=v; break;}
+    case 'place': {const e=ensure(d); e.place=e.place===b.dataset.v?null:b.dataset.v; if(!e.place) delete e.place; break;}
+    case 'addopen': ui.adding=b.dataset.v; render(); return;
+    case 'medtoggle': {const e=ensure(d), c=b.dataset.c, n=b.dataset.v; e.meds[c]=e.meds[c]||{};
+      if(e.meds[c][n]!=null) delete e.meds[c][n]; else {e.meds[c][n]=1; delete e.none[c];}
+      if(!Object.keys(e.meds[c]).length) delete e.meds[c]; break;}
+    case 'medstep': {const e=ensure(d), c=b.dataset.c, n=b.dataset.v; const v=(e.meds[c][n]||1)+Number(b.dataset.d); e.meds[c][n]=Math.max(1,Math.min(20,v)); break;}
+    case 'none': {const e=ensure(d), c=b.dataset.c; if(e.none[c]) delete e.none[c]; else e.none[c]=true; break;}
+    case 'delask': ui.confirmDel=true; render(); return;
+    case 'delno': ui.confirmDel=false; render(); return;
+    case 'delyes': delete S.entries[d]; persist(); ui.confirmDel=false; render(); toast('Eintrag gelöscht'); return;
+    case 'period': ui.period=Number(b.dataset.v); render(); return;
+    case 'msgclose': ui.msg=null; render(); return;
+    case 'closefb': ui.fallback=null; render(); return;
+    case 'copyfb': {const t=document.getElementById('fbtext'); try{await navigator.clipboard.writeText(t.value); toast('Kopiert');}catch(e){t.focus(); t.select(); toast('Text markiert, jetzt kopieren');} return;}
+    case 'sharepending': {const p=ui.pending; if(!p) return; try{await navigator.share({files:[p.file]}); if(p.isBackup){S.lastBackup=new Date().toISOString(); persist();} ui.pending=null; render(); toast('Gespeichert');}
+      catch(err){ if(err&&err.name==='AbortError'){toast('Nicht gespeichert');} else {ui.pending=null; ui.msg='Die Datei konnte nicht gespeichert werden.'; render();} } return;}
+    case 'pendingclose': ui.pending=null; render(); return;
+    case 'rmpollen': delete S.pollen[b.dataset.c]; persist(); render(); return;
+    case 'rmplace':S.places.splice(Number(b.dataset.i),1); persist(); render(); return;
+    case 'rmmed': S.meds[b.dataset.c].splice(Number(b.dataset.i),1); persist(); render(); return;
+    case 'backup': {const txt=JSON.stringify(S,null,1); const ok=await save(`Pollen-Tagebuch-Backup-${today()}.json`,txt,'Backup (Text)',txt,true);
+      if(ok){S.lastBackup=new Date().toISOString(); persist(); render(); toast('Backup gespeichert');} return;}
+    case 'csv': {const c=buildCSV(); if(await save(`Pollen-Tagebuch-${today()}.csv`,c,'Tabelle (CSV)',c)) toast('Tabelle gespeichert'); return;}
+    case 'pdf': {b.disabled=true; b.textContent='Wird erstellt…';
+      try{const r=await buildPDF(); if(await save(`Arztbericht-${r.start}-bis-${r.end}.pdf`,r.blob,null,null)) toast('Bericht gespeichert');}
+      catch(e){ui.msg='Der Bericht konnte nicht erstellt werden. Prüfe die Internetverbindung und versuche es nochmals.';}
+      render(); return;}
+    default: return;
+  }
+  touch(d); render();
+});
+app.addEventListener('submit',ev=>{
+  ev.preventDefault(); const f=ev.target, kind=f.dataset.form, inp=f.querySelector('input'); const v=(inp.value||'').trim().replace(/\s+/g,' ');
+  if(!v){ui.adding=null; render(); return;}
+  const e=ensure(ui.date);
+  if(kind==='place'){ if(!S.places.includes(v)) S.places.push(v); e.place=v; }
+  else { if(!S.meds[kind].includes(v)) S.meds[kind].push(v); e.meds[kind]=e.meds[kind]||{}; e.meds[kind][v]=1; delete e.none[kind]; }
+  ui.adding=null; touch(ui.date); render();
+});
+app.addEventListener('input',ev=>{
+  const t=ev.target;
+  if(t.id==='notes'){const e=ensure(ui.date); e.notes=t.value; touch(ui.date);}
+  if(t.id==='wb'){const e=ensure(ui.date); e.wb=Number(t.value); touch(ui.date); document.getElementById('wbval').textContent=e.wb; document.getElementById('wbhint').textContent='';}
+});
+app.addEventListener('pointerup',ev=>{ if(ev.target.id==='wb'){const e=ensure(ui.date); if(e.wb==null){e.wb=Number(ev.target.value); touch(ui.date); render();}} });
+app.addEventListener('change',ev=>{
+  const t=ev.target;
+  if(t.id==='notes'){render(); return;}
+  if(t.id==='reportp'){ui.reportP=t.value; return;}
+  if(t.id&&t.id.startsWith('ps-')){const p=t.dataset.place; if(t.value==='-') delete S.placeStation[p]; else S.placeStation[p]=t.value; persist(); toast('Station gespeichert'); return;}
+  if(t.id==='pollenfile' && t.files&&t.files.length){
+    Promise.all([...t.files].map(f=>f.text().then(txt=>{try{return {ok:true,...parsePollenCSV(txt,f.name)}}catch(e){return {ok:false,name:f.name}}}))).then(rs=>{
+      persist(); const good=rs.filter(r=>r.ok), bad=rs.filter(r=>!r.ok);
+      const sts=[...new Set(good.flatMap(r=>r.sts))].map(stName);
+      ui.msg=(good.length?`Pollendaten geladen: ${sts.join(', ')} (${good.reduce((a,r)=>a+r.n,0)} Tage).`:'')+(bad.length?` Nicht lesbar: ${bad.map(r=>r.name).join(', ')}. Bitte die Datei mit „_d_recent.csv“ am Ende wählen.`:'');
+      render(); window.scrollTo(0,0);});
+    return;}
+  if(t.id==='importfile' && t.files&&t.files[0]){const r=new FileReader(); r.onload=()=>{try{const n=importData(r.result); ui.msg=`Backup geladen: ${n} ${n===1?'Tag':'Tage'} übernommen.`;}catch(e){ui.msg='Diese Datei ist kein gültiges Backup des Pollen-Tagebuchs.';} render();}; r.readAsText(t.files[0]);}
+});
+render();
+try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+})();
+</script>
+</body>
+</html>
